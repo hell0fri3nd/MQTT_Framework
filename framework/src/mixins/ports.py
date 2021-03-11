@@ -18,8 +18,8 @@ class PortScannerMixin(InterfaceMixin):
 
     @with_category(InterfaceMixin.CMD_CAT_BROKER_OP)
     @with_argparser(port_parser)
-    def do_scan(self, args):
-        l_ports = self.connect_scan(args.id)
+    def do_port_scan(self, args):
+        l_ports = self.connect_scan(args.ip)
         self.show_results(l_ports)
 
     def show_results(self, ports):
@@ -42,17 +42,19 @@ class PortScannerMixin(InterfaceMixin):
         end = 80
 
         # instantiate a PortScanner object
+        self.print_info("Connecting to host")
         scanner = nmap.PortScanner()
 
         ans = []
 
+        self.print_info("Start scanning...")
         for i in range(begin, end + 1):
             # scan the target port
             res = scanner.scan(target, str(i))
 
             port = res['scan'][target]['tcp'][i]
 
-            ans = [port['state'], port['reason'], port['name'], port['product']]
+            ans.append([target, i, port['state'], port['reason'], port['name'], port['product']])
 
         return ans
 

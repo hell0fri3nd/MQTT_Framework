@@ -21,7 +21,7 @@ class NetworkScannerMixin(InterfaceMixin):
 
     @with_category(InterfaceMixin.CMD_CAT_BROKER_OP)
     @with_argparser(scans_parser)
-    def do_scan(self, args):
+    def do_net_scan(self, args):
         if args.cached:
             self.handle_cache()
         else:
