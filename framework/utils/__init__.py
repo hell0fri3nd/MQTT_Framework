@@ -1,7 +1,6 @@
 from datetime import datetime
 
 
-
 def banner():
     """The banner we want to display"""
 

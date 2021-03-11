@@ -10,3 +10,4 @@ blessings~=1.7
 prettytable
 peewee
 scapy
+python-nmap

@@ -1,13 +1,9 @@
-import time
-
 from cmd2 import with_argparser, with_category
 import argparse
 
 from prettytable import PrettyTable
-from scapy.layers.inet import TCP, IP
 from scapy.layers.l2 import ARP, Ether
-from scapy.sendrecv import srp, sr1, sr
-from scapy.volatile import RandShort
+from scapy.sendrecv import srp
 
 from framework.src.interfaces import InterfaceMixin
 
@@ -20,10 +16,8 @@ class NetworkScannerMixin(InterfaceMixin):
         super().__init__()
         self.clients = []
 
-    scans_parser = argparse.ArgumentParser()
+    scans_parser = argparse.ArgumentParser(description="Scan the network for ip addresses")
     scans_parser.add_argument('-c', '--cached', help='select the results of the last network scan performed')
-    scans_parser.add_argument('-c_scan', '--connect_scan',
-                              help='scan the devices ports in the network with three-way handshake')
 
     @with_category(InterfaceMixin.CMD_CAT_BROKER_OP)
     @with_argparser(scans_parser)
@@ -32,11 +26,6 @@ class NetworkScannerMixin(InterfaceMixin):
             self.handle_cache()
         else:
             self.run_arp_scan()
-
-        time.sleep(2)
-
-        client = self.clients[0]
-        self.connect_scan(client['ip'])
 
     def show_clients(self):
 
@@ -71,31 +60,4 @@ class NetworkScannerMixin(InterfaceMixin):
 
     def handle_cache(self):
         # TODO: Add retrival from file
-        pass
-
-    def connect_scan(self, destination_ip):
-        src_port = RandShort()
-        dst_port = 80
-
-        tcp_connect_scan_resp = sr1(IP(dst=destination_ip) / TCP(sport=src_port, dport=dst_port, flags="S"), timeout=10,
-                                    verbose=True)
-
-        if str(type(tcp_connect_scan_resp)) == "<type ‘NoneType’>":
-            print("Closed")
-        elif tcp_connect_scan_resp.haslayer(TCP):
-            if tcp_connect_scan_resp.getlayer(TCP).flags == 0x12:
-                send_rst = sr(IP(dst=destination_ip) / TCP(sport=src_port, dport=dst_port, flags="AR"), timeout=10,
-                              verbose=True)
-                print("Open")
-                print(send_rst)
-            elif tcp_connect_scan_resp.getlayer(TCP).flags == 0x14:
-                print("Closed")
-
-    def stealth_scan(self):
-        pass
-
-    def xmas_scan(self):
-        pass
-
-    def tcp_ack_scan(self):
         pass
