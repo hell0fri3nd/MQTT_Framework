@@ -11,3 +11,6 @@ prettytable
 peewee
 scapy
 python-nmap
+ipaddress
+netifaces
+psutil
