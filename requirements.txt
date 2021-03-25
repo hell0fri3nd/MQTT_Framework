@@ -14,3 +14,4 @@ python-nmap
 ipaddress
 netifaces
 psutil
+tinydb

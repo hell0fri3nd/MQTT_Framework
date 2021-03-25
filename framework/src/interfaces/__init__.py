@@ -28,6 +28,7 @@ class InterfaceMixin(Cmd):
         self.current_victim = None
         self.mqtt_client = None
         self.current_scan = None
+        self.current_targets = []
 
         self.base_prompt = get_prompt(self)
         self.prompt = self.base_prompt
@@ -43,17 +44,27 @@ class InterfaceMixin(Cmd):
     def print_error(self, text, end='\n', start=''):
         """Prints an error message with colors"""
 
-        self.poutput(start + '[-]' + ' ' + text, end=end)
+        self.poutput(start + '[!]' + ' ' + text, end=end)
 
     def print_info(self, text, end='\n', start=''):
         """Prints an information message with colors"""
 
-        self.poutput(start + '[!]' + ' ' + text, end=end)
+        self.poutput(start + '[i]' + ' ' + text, end=end)
 
     def print_ok(self, text, end='\n', start=''):
         """Prints a successful message with colors"""
 
         self.poutput(start + '[+]' + ' ' + text, end=end)
+
+    def print_verbose(self, text, args, end='\n', start=''):
+        """Prints verbose message with colors if verbose flag is true"""
+        if args.verbose:
+            self.poutput(start + '[**]' + ' ' + str(text), end=end)
+
+    def print_question(self, text, end='\n', start=''):
+        """Prints a question message with colors"""
+
+        self.poutput(start + '[?]' + ' ' + text, end=end)
 
     def print_pairs(self, title, body):
         """Prints a message that contains pairs for data"""
