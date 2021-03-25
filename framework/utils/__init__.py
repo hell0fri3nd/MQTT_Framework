@@ -1,5 +1,7 @@
 import time
 from datetime import datetime
+import sys
+import itertools
 
 
 def banner():
@@ -41,3 +43,20 @@ def get_prompt(cli):
 def now():
     """Returns the current time in iso format"""
     return datetime.now().isoformat()
+
+
+done_loading = False
+
+
+def waiting_animation():
+    for c in itertools.cycle(['|', '/', '-', '\\']):
+        if done_loading:
+            break
+        sys.stdout.write('\r[' + c + '] .. loading .. [' + c + ']')
+        sys.stdout.flush()
+        time.sleep(0.1)
+
+
+def set_done(d):
+    global done_loading
+    done_loading = d

@@ -1,3 +1,5 @@
+import threading
+
 import scapy
 from cmd2 import with_argparser, with_category
 from prettytable import PrettyTable
@@ -10,6 +12,7 @@ import scapy.all as scapy
 from tinydb import TinyDB, Query
 
 from framework.src.interfaces import InterfaceMixin
+from framework.utils import waiting_animation, set_done
 
 
 class NetworkScannerMixin(InterfaceMixin):
@@ -54,9 +57,14 @@ class NetworkScannerMixin(InterfaceMixin):
 
             # Scanning each hosts ports
             self.print_info("Port scanning started")
+            # Showing waiting animation
+            set_done(False)
+            t = threading.Thread(target=waiting_animation)
+            t.start()
             for elem in hlist:
                 self.host_scan(elem)
-
+            set_done(True)
+            print('\n')
             self.print_ok("Port scanning executed")
 
             # Save hosts data
