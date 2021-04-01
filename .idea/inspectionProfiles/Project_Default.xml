@@ -5,6 +5,7 @@
       <option name="ignoredIdentifiers">
         <list>
           <option value="nmap.PortScanner" />
+          <option value="str.__or__" />
         </list>
       </option>
     </inspection_tool>

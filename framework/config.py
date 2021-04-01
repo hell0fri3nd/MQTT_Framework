@@ -23,4 +23,3 @@ C2_BASE_TOPIC = '$SYS/test123'
 # Other
 DEFINITIONS_PATH = BASE_PATH + 'resources/definitions.json'
 STARTUP_SCRIPT = BASE_PATH + 'resources/shell_startup.rc'
-SHODAN_API_KEY = os.getenv('SHODAN_API_KEY')

@@ -1,8 +1,5 @@
 import threading
-
 import scapy
-from cmd2 import with_argparser, with_category
-from prettytable import PrettyTable
 import argparse
 import nmap
 import ipaddress
@@ -10,9 +7,13 @@ import netifaces
 import os
 import scapy.all as scapy
 from tinydb import TinyDB, Query
+from shodan import Shodan
+from cmd2 import with_argparser, with_category
+from prettytable import PrettyTable
 
 from framework.src.interfaces import InterfaceMixin
-from framework.utils import waiting_animation, set_done
+from framework.utils import waiting_animation, set_done, nmap_shodan_data_merger
+from framework.utils.constants import SHODAN_API_KEY_SERVICE
 
 
 class NetworkScannerMixin(InterfaceMixin):
@@ -20,7 +21,6 @@ class NetworkScannerMixin(InterfaceMixin):
 
     def __init__(self):
         super().__init__()
-        self.hosts = []
         self.db = TinyDB('./framework/database/db.json')
         self.args = None
 
@@ -43,24 +43,45 @@ class NetworkScannerMixin(InterfaceMixin):
     @with_category(InterfaceMixin.CMD_CAT_BROKER_OP)
     @with_argparser(scans_parser)
     def do_scan(self, args):
-        self.hosts = []
         self.args = args
+        shodan = Shodan(SHODAN_API_KEY_SERVICE)
 
+        # Retrieve old scans from db
         if args.cached:
             self.handle_cache()
+
+        # Target ip scan
         elif args.target is not None:
-            target = args.target
-            self.print_ok("Started scanning " + target)
+            target = args.target.strip()
+            # LAN scan
+            self.print_ok("Started scanning with Nmap\n Target: " + target)
             # Showing waiting animation
             set_done(False)
             if not args.verbose:
                 t = threading.Thread(target=waiting_animation)
                 t.start()
-            self.host_scan(target)
+            res_nmap = self.host_scan(target)
             set_done(True)
+            self.print_verbose(res_nmap, args)
             print('\n')
+            self.print_ok("Nmap scanning executed")
+            # Shodan scan
+            self.print_ok("Started crawling with Shodan\n Target: " + target)
+            try:
+                res_shodan = shodan.host(target)
+                self.print_verbose(res_shodan, args)
+            except Exception as e:
+                self.print_error("Shodan error: " + str(e))
+            self.print_ok("Finished Shodan scanning")
+
+            # Save target object
+            self.print_verbose(nmap_shodan_data_merger(target, res_nmap, res_shodan), args)
+            self.db.insert(nmap_shodan_data_merger(target, res_nmap, res_shodan))
+            self.print_ok("Results added to database")
             # Show target details
-            self.show_clients(self.hosts)
+            # self.show_clients(self.hosts)
+
+        # Auto LAN scan
         elif args.auto:
             # Gets client net specs
             netdata = self.get_client_netdata()
@@ -79,24 +100,27 @@ class NetworkScannerMixin(InterfaceMixin):
 
             # Scanning each hosts ports
             self.print_info("Port scanning started")
+            scanned_h = []
             # Showing waiting animation
             set_done(False)
             if not args.verbose:
                 t = threading.Thread(target=waiting_animation)
                 t.start()
             for elem in hlist:
-                self.host_scan(elem)
+                r = self.host_scan(elem)
+                if r is not None:
+                    scanned_h.append(r)
             set_done(True)
             print('\n')
             self.print_ok("Port scanning executed")
 
             # Save hosts data
             # TODO: Filter data
-            for h in self.hosts:
+            for h in scanned_h:
                 self.db.insert(h)
 
             # Showing result formatted
-            self.show_clients(self.hosts)
+            self.show_clients(scanned_h)
 
     def show_clients(self, hosts):
         try:
@@ -274,8 +298,11 @@ class NetworkScannerMixin(InterfaceMixin):
                 if port_list[key]['state'] != 'closed':
                     active_p.append({key: port_list[key]})
             self.print_verbose(str(len(active_p)) + ' - ' + str(active_p), self.args)
+            # Returns host if it has at least one open port
             if len(active_p) != 0:
-                self.hosts.append(res)
+                return res
+            else:
+                return None
 
         except Exception as e:
             self.print_error("host_scan error: " + e.__str__())

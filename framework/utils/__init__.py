@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 import sys
 import itertools
+from .data_handler import *
 
 
 def banner():
