@@ -12,7 +12,7 @@ from cmd2 import with_argparser, with_category
 from prettytable import PrettyTable
 
 from framework.src.interfaces import InterfaceMixin
-from framework.utils import waiting_animation, set_done, nmap_shodan_data_merger
+from framework.utils import waiting_animation, set_done, nmap_shodan_data_merger, nmap_data_parser
 from framework.utils.constants import SHODAN_API_KEY_SERVICE
 
 
@@ -67,16 +67,26 @@ class NetworkScannerMixin(InterfaceMixin):
             self.print_ok("Nmap scanning executed")
             # Shodan scan
             self.print_ok("Started crawling with Shodan\n Target: " + target)
+            set_done(False)
+            if not args.verbose:
+                t = threading.Thread(target=waiting_animation)
+                t.start()
+            res_shodan = None
             try:
                 res_shodan = shodan.host(target)
                 self.print_verbose(res_shodan, args)
             except Exception as e:
                 self.print_error("Shodan error: " + str(e))
+            set_done(True)
+            print('\n')
             self.print_ok("Finished Shodan scanning")
-
             # Save target object
-            self.print_verbose(nmap_shodan_data_merger(target, res_nmap, res_shodan), args)
-            self.db.insert(nmap_shodan_data_merger(target, res_nmap, res_shodan))
+            if res_shodan is not None:
+                self.print_verbose(nmap_shodan_data_merger(target, res_nmap, res_shodan), args)
+                self.db.insert(nmap_shodan_data_merger(target, res_nmap, res_shodan))
+            else:
+                self.print_verbose(nmap_data_parser(res_nmap), args)
+                self.db.insert(nmap_data_parser(res_nmap))
             self.print_ok("Results added to database")
             # Show target details
             # self.show_clients(self.hosts)
@@ -88,16 +98,13 @@ class NetworkScannerMixin(InterfaceMixin):
             # Stops execution at user's request
             if netdata == "quit":
                 return
-
             # Resolving ipaddress in CIDR notation
             ipaddr_cidr = ipaddress.ip_network(
                 netdata[0] + '/' +
                 netdata[1], strict=False)
             self.print_verbose(ipaddr_cidr, args)
-
             # ARP requests to find up hosts
             hlist = self.resolve_up_hosts(str(ipaddr_cidr))
-
             # Scanning each hosts ports
             self.print_info("Port scanning started")
             scanned_h = []
@@ -113,12 +120,11 @@ class NetworkScannerMixin(InterfaceMixin):
             set_done(True)
             print('\n')
             self.print_ok("Port scanning executed")
-
             # Save hosts data
             # TODO: Filter data
-            for h in scanned_h:
-                self.db.insert(h)
-
+            #for h in scanned_h:
+                # print(h)
+                # self.db.insert(h)
             # Showing result formatted
             self.show_clients(scanned_h)
 
@@ -131,7 +137,7 @@ class NetworkScannerMixin(InterfaceMixin):
 
             while interacting:
                 self.print_question('Choose host number to investigate its details, type \\q to quit')
-                # Select the wanted host
+                # Select the wanted host based by number
                 while True:
                     ans = input(f"Input: ")
                     try:
@@ -139,6 +145,8 @@ class NetworkScannerMixin(InterfaceMixin):
                             interacting = False
                             self.print_ok(f"Exited from network scanner\n")
                             break
+                        # Parsing the chosen host
+                        # chosen_h = nmap_data_parser(hosts[int(ans)])
                         chosen_h = hosts[int(ans)]
                         break
                     except Exception as e:
@@ -186,17 +194,13 @@ class NetworkScannerMixin(InterfaceMixin):
                 for p in ports:
                     if ports[p]['state'] != 'closed':
                         open_ports.append(p)
-                try:
-                    mac_addr = inner_dict['addresses']['mac']
-                except Exception:
-                    mac_addr = 'x'
 
                 scans_table.add_row([
                     i,
                     ipaddr[0],
-                    mac_addr,
+                    inner_dict['addresses'].get('mac'),
                     open_ports,
-                    inner_dict['hostnames'][0]['name']
+                    inner_dict['hostnames'][0].get('name')
                 ])
                 i += 1
 
@@ -221,20 +225,15 @@ class NetworkScannerMixin(InterfaceMixin):
             ports = host['scan'][str(ipaddr[0])]['tcp']
 
             for key in ports:
-                try:
-                    scripts = ports[key]['script']
-                except Exception as e:
-                    scripts = ''
-
                 port_table.add_row([
                     key,
-                    ports[key]['state'],
-                    ports[key]['reason'],
-                    ports[key]['name'],
-                    ports[key]['product'],
-                    ports[key]['version'],
-                    ports[key]['extrainfo'],
-                    scripts
+                    ports[key].get('state'),
+                    ports[key].get('reason'),
+                    ports[key].get('name'),
+                    ports[key].get('product'),
+                    ports[key].get('version'),
+                    ports[key].get('extrainfo'),
+                    ports[key].get('script')
                 ])
 
             self.ppaged(msg=str(port_table))
@@ -254,26 +253,26 @@ class NetworkScannerMixin(InterfaceMixin):
             for key in host['scan']:
                 ipaddr.append(key)
 
-            os_array = host['scan'][str(ipaddr[0])]['osmatch']
+            os_array = host['scan'].get(str(ipaddr[0])).get('osmatch')
 
             for elem in os_array:
                 try:
                     type_list = []
-                    for obj in elem['osclass']:
-                        type_list.append(obj['type'])
+                    for obj in elem.get('osclass'):
+                        type_list.append(obj.get('type'))
                 except Exception as e:
                     type_list = 'Error: ' + str(e)
 
                 try:
                     cpe_list = []
-                    for obj in elem['osclass']:
-                        cpe_list.append(obj['cpe'])
+                    for obj in elem.get('osclass'):
+                        cpe_list.append(obj.get('cpe'))
                 except Exception as e:
                     cpe_list = 'Error: ' + str(e)
 
                 port_table.add_row([
-                    elem['name'],
-                    elem['accuracy'],
+                    elem.get('name'),
+                    elem.get('accuracy'),
                     type_list,
                     cpe_list
                 ])
@@ -291,11 +290,11 @@ class NetworkScannerMixin(InterfaceMixin):
             res = nm.scan(hosts=str(host), arguments=arg)
             self.print_verbose(res, self.args)
             active_p = []
-            port_list = res['scan'][str(host)]['tcp']
+            port_list = res.get('scan').get(str(host)).get('tcp')
             # Excludes closed ports
             for key in port_list:
-                self.print_verbose(str(key) + ': ' + str(port_list[key]), self.args)
-                if port_list[key]['state'] != 'closed':
+                self.print_verbose(str(key) + ': ' + str(port_list.get(key)), self.args)
+                if port_list.get(key).get('state') != 'closed':
                     active_p.append({key: port_list[key]})
             self.print_verbose(str(len(active_p)) + ' - ' + str(active_p), self.args)
             # Returns host if it has at least one open port
@@ -377,7 +376,8 @@ class NetworkScannerMixin(InterfaceMixin):
 
             i = 0
             for iface in ifaces:
-                ifaces_table.add_row([i, iface['name'], iface['ips'][1], iface['mac'], iface['description']])
+                ifaces_table.add_row(
+                    [i, iface.get('name'), iface.get('ips')[1], iface.get('mac'), iface.get('description')])
                 i += 1
 
             self.ppaged(msg=str(ifaces_table))

@@ -11,7 +11,7 @@ def banner():
     return ("""
     MQTT-Framework
     """) + f"""
-        {"MQTT-Framework Security testing"}
+        {"Cristiano Lucian"}
     """
 
 
