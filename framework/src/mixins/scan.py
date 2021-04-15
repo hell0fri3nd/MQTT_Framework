@@ -81,15 +81,18 @@ class NetworkScannerMixin(InterfaceMixin):
             print('\n')
             self.print_ok("Finished Shodan scanning")
             # Save target object
+            res = {}
             if res_shodan is not None:
-                self.print_verbose(nmap_shodan_data_merger(target, res_nmap, res_shodan), args)
-                self.db.insert(nmap_shodan_data_merger(target, res_nmap, res_shodan))
+                res = nmap_shodan_data_merger(target, res_nmap, res_shodan)
+                self.print_verbose(res, args)
+                self.db.insert(res)
             else:
-                self.print_verbose(nmap_data_parser(res_nmap), args)
-                self.db.insert(nmap_data_parser(res_nmap))
+                res = nmap_data_parser(res_nmap)
+                self.print_verbose(res, args)
+                self.db.insert(res)
             self.print_ok("Results added to database")
             # Show target details
-            # self.show_clients(self.hosts)
+            self.show_target_ports_det(res)
 
         # Auto LAN scan
         elif args.auto:
@@ -120,11 +123,6 @@ class NetworkScannerMixin(InterfaceMixin):
             set_done(True)
             print('\n')
             self.print_ok("Port scanning executed")
-            # Save hosts data
-            # TODO: Filter data
-            #for h in scanned_h:
-                # print(h)
-                # self.db.insert(h)
             # Showing result formatted
             self.show_clients(scanned_h)
 
@@ -146,8 +144,8 @@ class NetworkScannerMixin(InterfaceMixin):
                             self.print_ok(f"Exited from network scanner\n")
                             break
                         # Parsing the chosen host
-                        # chosen_h = nmap_data_parser(hosts[int(ans)])
-                        chosen_h = hosts[int(ans)]
+                        chosen_h = nmap_data_parser(hosts[int(ans)])
+                        print(chosen_h)
                         break
                     except Exception as e:
                         self.print_error("Invalid input")
@@ -155,15 +153,19 @@ class NetworkScannerMixin(InterfaceMixin):
                 if not interacting:
                     break
                 # Show port and os tables
-                self.show_ports_table(chosen_h)
+                self.show_target_ports_det(chosen_h)
                 if self.args.os_scan:
                     self.show_os_table(chosen_h)
                 # Setting target
-                self.print_question(f"Type \\y if you want to add the host to the target list")
+                self.print_question(
+                    f"Type \\y if you want to add the host to the target list, \\s to save it in the database")
                 ans = input(f"Input: ")
                 if ans == '\\y':
                     self.current_targets.append(chosen_h)
                     self.print_ok(f"Target added to list")
+                elif ans == '\\s':
+                    self.db.insert(chosen_h)
+                    self.print_ok(f"Target added to database")
                 else:
                     self.print_ok(f"Host discarded")
 
@@ -209,36 +211,93 @@ class NetworkScannerMixin(InterfaceMixin):
         except Exception as e:
             self.print_error("show_hosts_table error: " + e.__str__())
 
-    def show_ports_table(self, host):
+    def show_target_ports_det(self, host):
         try:
-            port_table = PrettyTable(field_names=[
-                'Port number', 'State', 'Reason', 'Name', 'Product', 'Version', 'Extrainfo', 'Scripts'
+            port_table1 = PrettyTable(field_names=[
+                '#', 'Port number', 'State', 'Reason', 'Name'
             ])
 
             self.print_ok("Ports for the selected host:")
-            ipaddr = []
 
-            # implementing a list, an host can have multiple ips
-            for key in host['scan']:
-                ipaddr.append(key)
+            ports = host.get('mqtt_ports')
 
-            ports = host['scan'][str(ipaddr[0])]['tcp']
-
+            i = 0
             for key in ports:
-                port_table.add_row([
-                    key,
-                    ports[key].get('state'),
-                    ports[key].get('reason'),
-                    ports[key].get('name'),
-                    ports[key].get('product'),
-                    ports[key].get('version'),
-                    ports[key].get('extrainfo'),
-                    ports[key].get('script')
+                port_table1.add_row([
+                    i,
+                    key.get('port'),
+                    key.get('state'),
+                    key.get('reason'),
+                    key.get('name'),
                 ])
+                i += 1
 
-            self.ppaged(msg=str(port_table))
+            self.ppaged(msg=str(port_table1))
+
+            self.print_info("Details found: \n" +
+                            "Nmap command used: " + host.get('nmap_command') +
+                            "\nHostname: " + str(host.get('hostnames')[0].get('name')) +
+                            "\nUptime: " + str(host.get('uptime')) +
+                            "\nOther open ports: " + str(host.get('ports'))
+                            + "\n")
+            # Table 2 details
+            port_table2 = PrettyTable(field_names=[
+                'City', 'Postal Code', 'Country', 'Organization', 'Last update'
+            ])
+
+            if host.get('location') is not None:
+                loc = host.get('location')
+                port_table2.add_row([
+                    loc.get('city'),
+                    loc.get('postal_code'),
+                    loc.get('country_name'),
+                    loc.get('org'),
+                    loc.get('last_update')
+                ])
+                self.ppaged(msg=str(port_table2))
+
+            # Select the desired port to inspect
+            while True:
+                ans = input(f"Select the desired port to inspect it, type \\q to quit: ")
+                try:
+                    if ans == '\\q':
+                        break
+
+                    port_table3 = PrettyTable(field_names=[
+                        'Topic name', 'Payload'
+                    ])
+                    msgs = ports[int(ans)].get('messages')
+                    if msgs is not None:
+                        for key in msgs:
+                            port_table3.add_row([
+                                key.get('topic'),
+                                key.get('payload')
+                            ])
+
+                        self.ppaged(msg=str(port_table3))
+
+                    self.print_info("Data to inspect: \n" +
+                                    "MQTT response code: " + str(ports[int(ans)].get('mqtt_code')) +
+                                    "\nPort hostnames: " + str(ports[int(ans)].get('additional').get('hostnames')) +
+                                    "\nProduct: " + str(ports[int(ans)].get('additional').get('product')) +
+                                    "\nVersion: " + str(ports[int(ans)].get('additional').get('version')) +
+                                    "\nExtrainfo: " + str(ports[int(ans)].get('additional').get('extrainfo')) + '\n' +
+                                    "\nAdditional data: " + str(ports[int(ans)].get('data')) + '\n'
+                                    )
+
+                    scripts = ports[int(ans)].get('script')
+                    if scripts is not None:
+                        self.print_info("Scripts: ")
+                        for key in scripts:
+                            print(key + ": \n" +
+                                  ports[int(ans)].get('script').get(key))
+                        print('\n')
+
+                except Exception as e:
+                    self.print_error("Invalid input: " + str(e))
+
         except Exception as e:
-            self.print_error("show_ports_table error: " + e.__str__())
+            self.print_error("show_target_ports_det error: " + str(e))
 
     def show_os_table(self, host):
         try:
@@ -279,7 +338,7 @@ class NetworkScannerMixin(InterfaceMixin):
 
             self.ppaged(msg=str(port_table))
         except Exception as e:
-            self.print_error("show_ports_table error: " + e.__str__())
+            self.print_error("show_os_table error: " + e.__str__())
 
     def host_scan(self, host):
         # TODO: Add error handling for not valid host
