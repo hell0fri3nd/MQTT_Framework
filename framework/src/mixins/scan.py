@@ -47,7 +47,7 @@ class NetworkScannerMixin(InterfaceMixin):
         self.args = args
         shodan = Shodan(SHODAN_API_KEY_SERVICE)
 
-    # Retrieve old scans from db
+        # Retrieve old scans from db
         if args.cached:
             self.handle_cache()
 
@@ -125,9 +125,9 @@ class NetworkScannerMixin(InterfaceMixin):
             print('\n')
             self.print_ok("Port scanning executed")
             # Showing result formatted
-            self.show_clients(scanned_h)
+            self.show_clients(scanned_h, args)
 
-    def show_clients(self, hosts):
+    def show_clients(self, hosts, args):
         try:
             chosen_h = {}
             interacting = True
@@ -146,10 +146,11 @@ class NetworkScannerMixin(InterfaceMixin):
                             break
                         # Parsing the chosen host
                         chosen_h = nmap_data_parser(hosts[int(ans)])
-                        self.print_verbose(chosen_h)
+                        self.print_verbose(chosen_h, args)
                         break
                     except Exception as e:
                         self.print_error("Invalid input")
+                        self.print_verbose(e, args)
                 # Cheking if users wants to quit
                 if not interacting:
                     break
@@ -157,7 +158,8 @@ class NetworkScannerMixin(InterfaceMixin):
                 self.show_target_ports_det(chosen_h)
                 # Setting target
                 self.print_question(
-                    f"Type \\y if you want to add the host to the target list, \\s to save it in the database")
+                    f"Type \\y if you want to add the host to the target list, \\s to save it in the database, "
+                    f"anything else to quit")
                 ans = input(f"Input: ")
                 if ans == '\\y':
                     self.current_targets.append(chosen_h)
@@ -401,7 +403,7 @@ class NetworkScannerMixin(InterfaceMixin):
 
     def resolve_up_hosts(self, ip):
         self.print_info(f'Resolving up hosts')
-        
+
         arp_req_frame = scapy.ARP(pdst=ip)
 
         broadcast_ether_frame = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
