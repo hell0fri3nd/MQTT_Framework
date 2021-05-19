@@ -1,3 +1,4 @@
+import sys
 import threading
 import scapy
 import argparse
@@ -46,7 +47,7 @@ class NetworkScannerMixin(InterfaceMixin):
         self.args = args
         shodan = Shodan(SHODAN_API_KEY_SERVICE)
 
-        # Retrieve old scans from db
+    # Retrieve old scans from db
         if args.cached:
             self.handle_cache()
 
@@ -141,21 +142,19 @@ class NetworkScannerMixin(InterfaceMixin):
                     try:
                         if ans == '\\q':
                             interacting = False
-                            self.print_ok(f"Exited from network scanner\n")
+                            self.print_ok(f"Quitted from scan\n")
                             break
                         # Parsing the chosen host
                         chosen_h = nmap_data_parser(hosts[int(ans)])
-                        print(chosen_h)
+                        self.print_verbose(chosen_h)
                         break
                     except Exception as e:
                         self.print_error("Invalid input")
                 # Cheking if users wants to quit
                 if not interacting:
                     break
-                # Show port and os tables
+                # Show port tables
                 self.show_target_ports_det(chosen_h)
-                if self.args.os_scan:
-                    self.show_os_table(chosen_h)
                 # Setting target
                 self.print_question(
                     f"Type \\y if you want to add the host to the target list, \\s to save it in the database")
@@ -258,9 +257,11 @@ class NetworkScannerMixin(InterfaceMixin):
 
             # Select the desired port to inspect
             while True:
-                ans = input(f"Select the desired port to inspect it, type \\q to quit: ")
+                self.print_question(f"Select the desired port to inspect it, type \\q to quit: ")
+                ans = input(f"Input: ")
                 try:
                     if ans == '\\q':
+                        self.print_ok(f"Quitted from scan\n")
                         break
 
                     port_table3 = PrettyTable(field_names=[
@@ -275,6 +276,9 @@ class NetworkScannerMixin(InterfaceMixin):
                             ])
 
                         self.ppaged(msg=str(port_table3))
+
+                    if self.args.os_scan:
+                        self.show_os_table(host)
 
                     self.print_info("Data to inspect: \n" +
                                     "MQTT response code: " + str(ports[int(ans)].get('mqtt_code')) +
@@ -294,40 +298,28 @@ class NetworkScannerMixin(InterfaceMixin):
                         print('\n')
 
                 except Exception as e:
-                    self.print_error("Invalid input: " + str(e))
+                    self.print_error("Invalid input")
 
         except Exception as e:
             self.print_error("show_target_ports_det error: " + str(e))
 
     def show_os_table(self, host):
+        # TODO: Fix OS table
         try:
             port_table = PrettyTable(field_names=[
                 'Name', 'Accuracy', 'Type list', 'Cpe list'
             ])
 
             self.print_ok("OS details:")
-            ipaddr = []
 
-            # implementing a list, an host can have multiple ips
-            for key in host['scan']:
-                ipaddr.append(key)
-
-            os_array = host['scan'].get(str(ipaddr[0])).get('osmatch')
+            os_array = host.get('osmatch')
 
             for elem in os_array:
-                try:
-                    type_list = []
-                    for obj in elem.get('osclass'):
-                        type_list.append(obj.get('type'))
-                except Exception as e:
-                    type_list = 'Error: ' + str(e)
-
-                try:
-                    cpe_list = []
-                    for obj in elem.get('osclass'):
-                        cpe_list.append(obj.get('cpe'))
-                except Exception as e:
-                    cpe_list = 'Error: ' + str(e)
+                type_list = []
+                cpe_list = []
+                for obj in elem.get('osclass'):
+                    type_list.append(obj.get('type'))
+                    cpe_list.append(obj.get('cpe'))
 
                 port_table.add_row([
                     elem.get('name'),
@@ -409,6 +401,7 @@ class NetworkScannerMixin(InterfaceMixin):
 
     def resolve_up_hosts(self, ip):
         self.print_info(f'Resolving up hosts')
+        
         arp_req_frame = scapy.ARP(pdst=ip)
 
         broadcast_ether_frame = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")

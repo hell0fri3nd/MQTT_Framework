@@ -16,3 +16,4 @@ netifaces
 psutil
 tinydb
 shodan
+paho-mqtt
