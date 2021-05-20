@@ -40,9 +40,13 @@ def nmap_shodan_data_merger(ipaddr, ndata, sdata):
 
                 port_objs.append(obj)
 
+    mac = ndata.get('scan').get(ip).get('addresses').get('mac')
+
     new_data = {
         'nmap_command': ndata.get('nmap').get('command_line'),
         'ip': ip,
+        'mac': mac,
+        'vendor': ndata.get('scan').get(ip).get('vendor').get(mac),
         'hostnames': ndata.get('scan').get(ip).get('hostnames'),
         'uptime': ndata.get('scan').get(ip).get('uptime'),
         'mqtt_ports': port_objs,
@@ -89,9 +93,13 @@ def nmap_data_parser(ndata):
 
         port_objs.append(obj)
 
+    mac = ndata.get('scan').get(ip).get('addresses').get('mac')
+
     new_data = {
         'nmap_command': ndata.get('nmap').get('command_line'),
         'ip': ip,
+        'mac': mac,
+        'vendor': ndata.get('scan').get(ip).get('vendor').get(mac),
         'hostnames': ndata.get('scan').get(ip).get('hostnames'),
         'uptime': ndata.get('scan').get(ip).get('uptime'),
         'mqtt_ports': port_objs,

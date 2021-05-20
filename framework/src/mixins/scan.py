@@ -47,6 +47,11 @@ class NetworkScannerMixin(InterfaceMixin):
         self.args = args
         shodan = Shodan(SHODAN_API_KEY_SERVICE)
 
+        # If no target specified it runs auto scan
+        if args.target is None:
+            args.auto = True
+            self.print_info('Target not supplied, switching to automatic scanning')
+
         # Retrieve old scans from db
         if args.cached:
             self.handle_cache()
@@ -339,7 +344,7 @@ class NetworkScannerMixin(InterfaceMixin):
         try:
             self.print_verbose(str(host), self.args)
             nm = nmap.PortScanner()
-            arg = '-sV -A -p T:1883,8883 --reason'
+            arg = '-sV --version-all -A -p T:1883,8883 --reason'
             res = nm.scan(hosts=str(host), arguments=arg)
             self.print_verbose(res, self.args)
             active_p = []

