@@ -7,9 +7,12 @@ def get_base_path():
 
 BASE_PATH = os.getenv('FRAMEWORK_BASE_PATH', get_base_path())
 
+# Radamsa execute command
+RADAMSA_CMD = 'radamsa.exe'
+
 # Word lists
-DEFAULT_USERNAME_LIST = BASE_PATH + 'resources/wordlists/usernames.txt'
-DEFAULT_PASSWORD_LIST = BASE_PATH + 'resources/wordlists/passwords.txt'
+DEFAULT_USERNAME_LIST = BASE_PATH + '/assets/dicts/xato-net-10-million-usernames.txt'
+DEFAULT_PASSWORD_LIST = BASE_PATH + 'framework/assets/dicts/xato-net-10-million-passwords.txt'
 
 # Connection Related
 DEFAULT_BROKER_HOST = 'test.mosquitto.org'

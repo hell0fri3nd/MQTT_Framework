@@ -1,11 +1,7 @@
-import sys
 import threading
-import scapy
 import argparse
 import nmap
 import ipaddress
-import netifaces
-import os
 import scapy.all as scapy
 from tinydb import TinyDB, Query
 from shodan import Shodan
@@ -13,7 +9,8 @@ from cmd2 import with_argparser, with_category
 from prettytable import PrettyTable
 
 from framework.src.interfaces import InterfaceMixin
-from framework.utils import waiting_animation, set_done, nmap_shodan_data_merger, nmap_data_parser
+from framework.utils import waiting_animation, set_done, nmap_shodan_data_merger, nmap_data_parser, get_client_netdata, \
+    extract_net_addresses
 from framework.utils.constants import SHODAN_API_KEY_SERVICE
 
 
@@ -22,13 +19,11 @@ class NetworkScannerMixin(InterfaceMixin):
 
     def __init__(self):
         super().__init__()
-        self.db = TinyDB('./framework/database/db.json')
+        self.db = TinyDB('./framework/database/targets.json')
         self.args = None
 
     scans_parser = argparse.ArgumentParser(
         description="Scan the network for active hosts and inspect mqtt common ports")
-    scans_parser.add_argument('-c', '--cached', help='select the results of the last network scan performed',
-                              action="store_true")
     scans_parser.add_argument('--verbose', help='increase output verbosity',
                               action="store_true")
     scans_parser.add_argument('-os', '--os_scan', help='display os details of targets',
@@ -52,12 +47,8 @@ class NetworkScannerMixin(InterfaceMixin):
             args.auto = True
             self.print_info('Target not supplied, switching to automatic scanning')
 
-        # Retrieve old scans from db
-        if args.cached:
-            self.handle_cache()
-
         # Target ip scan
-        elif args.target is not None:
+        if args.target is not None:
             target = args.target.strip()
             # LAN scan
             self.print_ok("Started scanning with Nmap\n Target: " + target)
@@ -66,13 +57,18 @@ class NetworkScannerMixin(InterfaceMixin):
             if not args.verbose:
                 t = threading.Thread(target=waiting_animation)
                 t.start()
-            res_nmap = self.host_scan(target)
+
+            try:
+              res_nmap = self.host_scan(target)
+            except Exception as e:
+                self.print_error("host_scan error: " + e.__str__())
+
             set_done(True)
             self.print_verbose(res_nmap, args)
             print('\n')
             self.print_ok("Nmap scanning executed")
             # Shodan scan
-            self.print_ok("Started crawling with Shodan\n Target: " + target)
+            self.print_ok("Started analyzing with Shodan\n Target: " + target)
             set_done(False)
             if not args.verbose:
                 t = threading.Thread(target=waiting_animation)
@@ -83,6 +79,7 @@ class NetworkScannerMixin(InterfaceMixin):
                 self.print_verbose(res_shodan, args)
             except Exception as e:
                 self.print_error("Shodan error: " + str(e))
+                res_shodan = None
             set_done(True)
             print('\n')
             self.print_ok("Finished Shodan scanning")
@@ -102,11 +99,14 @@ class NetworkScannerMixin(InterfaceMixin):
 
         # Auto LAN scan
         elif args.auto:
-            # Gets client net specs
-            netdata = self.get_client_netdata()
+            # Gets client net interface specs
+            interface_data = get_client_netdata(self)
             # Stops execution at user's request
-            if netdata == "quit":
+            if interface_data == "quit":
+                self.print_ok(f"Quitted from scan\n")
                 return
+            # Gets client net data
+            netdata = extract_net_addresses(interface_data[0], interface_data[1])
             # Resolving ipaddress in CIDR notation
             ipaddr_cidr = ipaddress.ip_network(
                 netdata[0] + '/' +
@@ -243,6 +243,7 @@ class NetworkScannerMixin(InterfaceMixin):
             self.print_info("Details found: \n" +
                             "Nmap command used: " + host.get('nmap_command') +
                             "\nHostname: " + str(host.get('hostnames')[0].get('name')) +
+                            "\nVendor: " + str(host.get('vendor')) +
                             "\nUptime: " + str(host.get('uptime')) +
                             "\nOther open ports: " + str(host.get('ports'))
                             + "\n")
@@ -268,7 +269,6 @@ class NetworkScannerMixin(InterfaceMixin):
                 ans = input(f"Input: ")
                 try:
                     if ans == '\\q':
-                        self.print_ok(f"Quitted from scan\n")
                         break
 
                     port_table3 = PrettyTable(field_names=[
@@ -287,7 +287,7 @@ class NetworkScannerMixin(InterfaceMixin):
                     if self.args.os_scan:
                         self.show_os_table(host)
 
-                    self.print_info("Data to inspect: \n" +
+                    self.print_info("Data for port %d: \n" % ports[int(ans)].get('port') +
                                     "MQTT response code: " + str(ports[int(ans)].get('mqtt_code')) +
                                     "\nPort hostnames: " + str(ports[int(ans)].get('additional').get('hostnames')) +
                                     "\nProduct: " + str(ports[int(ans)].get('additional').get('product')) +
@@ -341,7 +341,6 @@ class NetworkScannerMixin(InterfaceMixin):
 
     def host_scan(self, host):
         # TODO: Add error handling for not valid host
-        try:
             self.print_verbose(str(host), self.args)
             nm = nmap.PortScanner()
             arg = '-sV --version-all -A -p T:1883,8883 --reason'
@@ -361,51 +360,6 @@ class NetworkScannerMixin(InterfaceMixin):
             else:
                 return None
 
-        except Exception as e:
-            self.print_error("host_scan error: " + e.__str__())
-
-    def handle_cache(self):
-        # TODO: Add retrival from file
-        pass
-
-    def get_client_netdata(self):
-        try:
-            # Checks interfaces based on os (netifaces returns interfaces ids on windows)
-            if os.name == 'nt':
-                list = scapy.get_windows_if_list()
-                self.win_show_ifaces(list)
-            else:
-                list = netifaces.interfaces()
-                self.gen_show_ifaces(list)
-
-            self.print_question(f'Choose the device number, type \\q to quit')
-            while True:
-                iface_num = input(f"Input: ")
-                try:
-                    if iface_num == '\\q':
-                        return "quit"
-                    var = list[int(iface_num)]
-                    break
-                except Exception as e:
-                    self.print_error("Invalid input")
-
-            self.print_info(f"Retrieving IP Address & Netmask")
-            if os.name == 'nt':
-                iface = list[int(iface_num)]['guid']
-            else:
-                iface = list[int(iface_num)]
-
-            addrs = netifaces.ifaddresses(iface)
-
-            ip_address = addrs[netifaces.AF_INET][0]['addr']
-            netmask = addrs[netifaces.AF_INET][0]['netmask']
-
-            self.print_ok(f"Network data found\n IP: {ip_address}\n Netmask: {netmask}")
-
-            return [ip_address, netmask]
-        except Exception as e:
-            self.print_error(f"get_client_netdata: " + e.__str__())
-
     def resolve_up_hosts(self, ip):
         self.print_info(f'Resolving up hosts')
 
@@ -423,40 +377,3 @@ class NetworkScannerMixin(InterfaceMixin):
 
         self.print_info(f'Up hosts resolved\n Number of up hosts: {len(result)}')
         return result
-
-    def win_show_ifaces(self, ifaces):
-        try:
-
-            ifaces_table = PrettyTable(field_names=[
-                '#', 'Name', 'IP Address', 'MAC Address', 'Description'
-            ])
-
-            self.print_ok(f"Network interfaces on your device:")
-
-            i = 0
-            for iface in ifaces:
-                ifaces_table.add_row(
-                    [i, iface.get('name'), iface.get('ips')[1], iface.get('mac'), iface.get('description')])
-                i += 1
-
-            self.ppaged(msg=str(ifaces_table))
-        except Exception as e:
-            self.print_error(f"win_show_ifaces: " + e.__str__())
-
-    def gen_show_ifaces(self, ifaces):
-        try:
-
-            ifaces_table = PrettyTable(field_names=[
-                '#', 'Identifiers'
-            ])
-
-            self.print_ok(f"Network interfaces on your device:")
-
-            i = 0
-            for iface in ifaces:
-                ifaces_table.add_row([i, iface])
-                i += 1
-
-            self.ppaged(msg=str(ifaces_table))
-        except Exception as e:
-            self.print_error(f"win_show_ifaces: " + e.__str__())

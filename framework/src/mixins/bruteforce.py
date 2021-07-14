@@ -21,7 +21,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
 
     def __init__(self):
         super().__init__()
-        self.db = TinyDB('./framework/database/db.json')
+        self.db = TinyDB('./framework/database/targets.json')
         self.args = None
 
     bruteforcer_parser = argparse.ArgumentParser(
@@ -44,6 +44,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
 
         global comb_found
         comb_found = False
+        db_flag = False
         self.args = args
 
         self.print_info("Credentials Bruteforcer started - Good Luck!\n")
@@ -51,6 +52,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
         if args.target is None:
             # Getting last row from database
             args.target = self.db.get(doc_id=len(self.db)).get('ip')
+            db_flag = True
             self.print_info('Target not supplied, retrieving last target inserted in database')
 
         if args.nThreads is None:
@@ -62,7 +64,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
             self.print_info('Port argv not supplied, setting port to 1883')
 
         if args.dict_password is None:
-            args.dict_password = "framework/assets/dicts/xato-net-10-million-passwords.txt"
+            args.dict_password = "framework/assets/dicts/xato-net-10-million-passwords.txt" # right_psw.txt
             self.print_info('Default dictionaries for password will be used')
 
         if args.dict_username is None and args.username is None:
@@ -78,7 +80,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
 
         with timebudget("     > Your search for credentials"):
             if args.username is not None:
-                self.print_info('DETAILS' +
+                self.print_ok('DETAILS' +
                                 '\nTARGET => ' + args.target +
                                 '\nPORT => ' + str(args.port) +
                                 '\nTHREADS => ' + str(args.nThreads) +
@@ -95,7 +97,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
                                           len_psw_dict, 1)
 
             if args.username is None:
-                self.print_info('DETAILS' +
+                self.print_ok('DETAILS' +
                                 '\nTARGET => ' + args.target +
                                 '\nPORT => ' + str(args.port) +
                                 '\nTHREADS => ' + str(args.nThreads) +
@@ -114,30 +116,34 @@ class CredentialsBruteforceMixin(InterfaceMixin):
                 usrnmList_total = 0
 
                 self.print_info('Begin execution bruteforcing credentials')
-                with open(Path(args.dict_username)) as usrnm_file:
-                    for username in usrnm_file:
-                        if comb_found:
-                            break
+                try:
+                    with open(Path(args.dict_username)) as usrnm_file:
+                        for username in usrnm_file:
+                            if comb_found:
+                                break
 
-                        try:
-                            self.execute_on_passwords(username, args.dict_password, args.target, args.port,
-                                                      args.nThreads,
-                                                      len_psw_dict, usrnmList_total)
+                            try:
+                                self.execute_on_passwords(username, args.dict_password, args.target, args.port,
+                                                          args.nThreads,
+                                                          len_psw_dict, usrnmList_total)
 
-                        except:
-                            break
-                        usrnmList_total += 1
-                        sys.stdout.write(' >> %d/%d USERNAMES\r' % (usrnmList_total, len_usr_dict))
-                        sys.stdout.flush()
+                            except:
+                                break
+                            usrnmList_total += 1
+                            sys.stdout.write(' >> %d/%d USERNAMES\r' % (usrnmList_total, len_usr_dict))
+                            sys.stdout.flush()
+                except KeyboardInterrupt:
+                    pass
 
         if comb_found:
-            self.print_question(
-                f"Type \\s to add the credentials to the database for the selected target, anythinge else to quit")
-            ans = input(f"Input: ")
-            if ans == '\\s':
-                self.db.update({'credentials': {'username': username_found, 'password': password_found}},
-                               doc_ids=[(len(self.db))])
-                self.print_ok(f"Target credentials updated")
+            if db_flag:
+                self.print_question(
+                    f"Type \\s to add the credentials to the database for the selected target, anythinge else to quit")
+                ans = input(f"Input: ")
+                if ans == '\\s':
+                    self.db.update({'credentials': {'username': username_found, 'password': password_found}},
+                                   doc_ids=[(len(self.db))])
+                    self.print_ok(f"Target credentials updated")
         else:
             self.print_error("Bad luck! No username - password combination has been found.")
 
