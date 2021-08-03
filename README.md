@@ -1,6 +1,6 @@
 # MQTT_Framework
 
-This software is part of the Thesis Project for the Bachelor in Computer Science at the Free University of Bolzano. The
+This software is part of the Thesis Project for the **Bachelor in Computer Science at the Free University of Bolzano**. The
 idea was to develop a software, a framework with different tools that could automatize the security testing process for
 developers, in order to save time and help them find the most common vulnerabilities and bad implementation practices of MQTT protocol in IoT environments. This software has to adapt to different scenarios and implementations of the protocol and for this reason the tool should be highly customisable.
 
