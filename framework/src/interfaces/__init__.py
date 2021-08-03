@@ -64,5 +64,6 @@ class InterfaceMixin(Cmd):
 
         self.poutput(start + self.cl.blink_bold_yellow('[?]') + ' ' + self.cl.yellow(text), end=end)
 
+
 class InterfaceCLI:
     pass

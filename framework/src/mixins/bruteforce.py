@@ -25,7 +25,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
         self.args = None
 
     bruteforcer_parser = argparse.ArgumentParser(
-        description="Bruteforce credentials of a target based on a dictionary.")
+        description="Bruteforce credentials of a target/broker based on a dictionary.")
     bruteforcer_parser.add_argument('-dp', '--dict_password',
                                     help='specifies a dictionary to use for passwords instead of the default one')
     bruteforcer_parser.add_argument('-du', '--dict_username',
@@ -34,7 +34,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
     bruteforcer_parser.add_argument('-p', '--port', help='port to target, default is 1883')
     bruteforcer_parser.add_argument('-u', '--username', help='username, if not supplied the script will try to guess it'
                                                              ' with a dictionary')
-    bruteforcer_parser.add_argument('-t', '--target', help='specified number of thread to use')
+    bruteforcer_parser.add_argument('-t', '--target', help='Target/Broker\'s IP address')
     bruteforcer_parser.add_argument('--verbose', help='increase output verbosity',
                                     action="store_true")
 
@@ -138,7 +138,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
         if comb_found:
             if db_flag:
                 self.print_question(
-                    f"Type \\s to add the credentials to the database for the selected target, anythinge else to quit")
+                    f"Type \\s to add the credentials to the database for the selected target, anything else to quit")
                 ans = input(f"Input: ")
                 if ans == '\\s':
                     self.db.update({'credentials': {'username': username_found, 'password': password_found}},

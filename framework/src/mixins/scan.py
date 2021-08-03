@@ -59,7 +59,7 @@ class NetworkScannerMixin(InterfaceMixin):
                 t.start()
 
             try:
-              res_nmap = self.host_scan(target)
+                res_nmap = self.host_scan(target)
             except Exception as e:
                 self.print_error("host_scan error: " + e.__str__())
 
@@ -340,13 +340,13 @@ class NetworkScannerMixin(InterfaceMixin):
             self.print_error("show_os_table error: " + e.__str__())
 
     def host_scan(self, host):
-        # TODO: Add error handling for not valid host
-            self.print_verbose(str(host), self.args)
-            nm = nmap.PortScanner()
-            arg = '-sV --version-all -A -p T:1883,8883 --reason'
-            res = nm.scan(hosts=str(host), arguments=arg)
-            self.print_verbose(res, self.args)
-            active_p = []
+        self.print_verbose(str(host), self.args)
+        nm = nmap.PortScanner()
+        arg = '-sV --version-all -A -p T:1883,8883 --reason'
+        res = nm.scan(hosts=str(host), arguments=arg)
+        self.print_verbose(res, self.args)
+        active_p = []
+        try:
             port_list = res.get('scan').get(str(host)).get('tcp')
             # Excludes closed ports
             for key in port_list:
@@ -359,6 +359,9 @@ class NetworkScannerMixin(InterfaceMixin):
                 return res
             else:
                 return None
+        except Exception as e:
+            self.print_verbose("Host error: " + str(e), self.args)
+            return None
 
     def resolve_up_hosts(self, ip):
         self.print_info(f'Resolving up hosts')

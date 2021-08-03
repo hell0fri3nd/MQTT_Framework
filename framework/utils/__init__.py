@@ -20,7 +20,7 @@ def banner():
 
 
     """) + f"""
-        {"Cristiano Lucian"}
+        {"Customizable framework for IoT devices implementing MQTT"}
     """
 
 

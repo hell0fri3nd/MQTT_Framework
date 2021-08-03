@@ -63,10 +63,11 @@ def mqtt_args(desc):
 
 
 class LoggerMixin(InterfaceMixin):
-    logger_parser = mqtt_args("Listen to messages broadcasted for the selected topics and reply")
+    logger_parser = mqtt_args("Listen to messages broadcast for the selected topics")
     logger_parser.add_argument('-m', '--message-file', action='store',
                                default=None,
-                               help='CSV file with captured messages: use this for topics to subscribe to and messages to replay')
+                               help='CSV file with (id, topic, message) headers, use this to specify topics to '
+                                    'subscribe to')
     args = logger_parser.parse_args()
 
     @with_category(InterfaceMixin.CMD_CAT_VICTIM_OP)
@@ -77,6 +78,10 @@ class LoggerMixin(InterfaceMixin):
         topics = ['#']
         if args.message_file is not None:
             _, topics = load_messages(args.message_file)
+        else:
+            self.print_info("No message file specified, subscribing to '#'")
+
+        self.print_ok("Executing logger")
 
         mqtt_logger.run(topics)
 
@@ -110,7 +115,6 @@ class MQTTLogger:
             client.subscribe(t)
 
     def _on_message(self, client, userdata, msg):
-        print(msg.timestamp)
         self.msg_logger.bind(topic=msg.topic, qos=msg.qos).info(msg.payload)
 
     def _connect(self, topics=[]):

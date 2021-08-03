@@ -70,7 +70,6 @@ class SnifferMixin(InterfaceMixin):
             capture = pyshark.LiveCapture(interface=iface, display_filter=args.display_filter)
         else:
             # Takes first available interface
-            iface = None
             capture = pyshark.LiveCapture(
                 display_filter=args.display_filter)
             self.print_info('Using first available interface automatically')
@@ -114,6 +113,7 @@ class SnifferMixin(InterfaceMixin):
                         self.print_error("Sorry, no credential found sniffing your LAN")
 
                 except KeyboardInterrupt:
+                    t.raise_exception()
                     print("\nExiting...")
 
             else:

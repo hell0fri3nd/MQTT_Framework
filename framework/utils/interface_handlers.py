@@ -32,7 +32,6 @@ def get_client_netdata(self):
 
 def win_show_ifaces(self, ifaces):
     try:
-
         ifaces_table = PrettyTable(field_names=[
             '#', 'Name', 'IP Address', 'MAC Address', 'Description'
         ])
