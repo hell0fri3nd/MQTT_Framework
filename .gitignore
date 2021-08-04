@@ -53,5 +53,4 @@ fabric.properties
 # CUSTOM IGNORE
 /venv
 /framework/utils/constants.py
-/framework/database/*
 __pycache__
