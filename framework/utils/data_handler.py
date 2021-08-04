@@ -1,6 +1,9 @@
 def nmap_shodan_data_merger(ipaddr, ndata, sdata):
     ip = str(ipaddr)
 
+    if ndata is None:
+        ndata = []
+
     shod_mqtt_data = []
 
     # Filter mqtt ports only
@@ -11,6 +14,7 @@ def nmap_shodan_data_merger(ipaddr, ndata, sdata):
     # Filter ports object
     port_objs = []
     _n_datalist = ndata.get('scan').get(ip).get('tcp')
+
     for p_num in _n_datalist:
         for d in shod_mqtt_data:
             # Equal port number and equal service running
