@@ -13,7 +13,7 @@ technologies, becoming vital for fields such as automotive, industrial manufactu
 In order to run the framework you need the libraries you find in _requirements.txt_ and Radamasa software. To install it
 please refer to the [official repo](https://gitlab.com/akihe/radamsa). 
 
-The framework has been tested on Windows 10 and GNU/Linux operating systems, both on Raspberry Pi and an average performance PC. 
+The framework has been tested on Windows 10 and GNU/Linux operating systems, both on Raspberry Pi and an average performance Windows machine. 
 
 ### The plugins
 
@@ -35,3 +35,6 @@ cli. They are also used to check whether a `-help` option is specified.
 - **Exporting the module:** The custom code has to be exported from the mixins package first, by importing it in
 `mixins\_init_.py`. Then the module has to be added to the mixins array in the _MQTTcli_ class.
 
+
+#### References
+A special thanks to Akamai Threat Research and Agneta Akorevaar (Kiwi PyCon 2019) for the useful resources.
