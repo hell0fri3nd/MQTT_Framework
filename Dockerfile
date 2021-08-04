@@ -11,11 +11,15 @@ WORKDIR ./
 COPY requirements.txt requirements.txt
 
 # install tshark
-RUN apt-get update -y && apt-get install tshark -y
+RUN apt-get update -y && \
+    apt-get install tshark -y
 
-# install nmap and requirements libraries
-RUN apt-get install nmap -y && \
-    pip3 install -r requirements.txt
+# install nmap
+RUN apt-get update -y && \
+    apt-get install nmap -y \
+
+# install requirements libraries
+RUN pip3 install -r requirements.txt
 
 # compile radamsa
 RUN git clone --depth 1 --branch master https://gitlab.com/akihe/radamsa.git && \
