@@ -2,16 +2,19 @@
 
 FROM python:3
 
+# set environment as non interactive to avoid tshark's prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
 WORKDIR ./
 
 # copy requirements.txt
 COPY requirements.txt requirements.txt
 
-# install tshark without user interaction
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tshark
+# install tshark
+RUN apt-get update -y && apt-get install tshark -y
 
 # install nmap and requirements libraries
-RUN apt-get install nmap && \
+RUN apt-get install nmap -y && \
     pip3 install -r requirements.txt
 
 # compile radamsa
