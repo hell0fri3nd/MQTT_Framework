@@ -24,7 +24,7 @@ The framework can be installed through **Docker**.
 - move inside the framework's main directory with `cd MQTT_Framework`  
 - run `docker build .` to create the Docker image
 - check if the image has no name with `docker images` (pip might have issues with *python-nmap* package), solve the issue with `docker tag <IMAGE_ID> <image-name>`
-- run the image by typing `sudo docker run -it <image-name>; bash` 
+- run the image by typing `sudo docker run -it <image-name>` 
 
 ## Basic functionalities
 
