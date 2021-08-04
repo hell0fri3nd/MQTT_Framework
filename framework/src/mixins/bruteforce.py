@@ -196,6 +196,7 @@ class CredentialsBruteforceMixin(InterfaceMixin):
                     self.print_error("An error occurred: " + str(e))
                     break
 
+        t.join()
 
         if not comb_found:
             self.print_verbose("No combination with username [ %s ] has been found." % username.rstrip(), self.args)
