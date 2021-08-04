@@ -16,7 +16,7 @@ RUN apt-get update -y && \
 
 # install nmap
 RUN apt-get update -y && \
-    apt-get install nmap -y \
+    apt-get install nmap -y
 
 # install requirements libraries
 RUN pip3 install -r requirements.txt
