@@ -52,7 +52,7 @@ The framework supports Shodan.io analysis, to enable it just add your API KEY in
 
 Each module must have its own ArgumentParser instance, which is a class that handles user input together with python's cli. When a new module is created, it has to respect the following criteria:
 - **Inheritance:** A new Mixin class must be produced in order to plug the custom module to the framework. This class has to inherit InterfaceMixin and must create a new, unique, instance of ArgumentParser. With this object the developer can add/handle custom arguments needed by its module with some help text.
-- **The do_ operator:** Then the function `do_"name of the command" `must be defined with the decorators `@with_category` and `@with_argparser`. In this way the framework will know what code to execute for a specific
+- **The do_ operator:** Then the function `do_<name of the command> `must be defined with the decorators `@with_category` and `@with_argparser`. In this way the framework will know what code to execute for a specific
   command, what category it is related to and which argument parser apply when the module is loaded with the framework cli. They are also used to check whether a `-help` option is specified.
 - **Exporting the module:** The custom code has to be exported from the mixins package first, by importing it in
   `mixins_init_.py`. Then the module has to be added to the mixins array in the _MQTTcli_ class.
