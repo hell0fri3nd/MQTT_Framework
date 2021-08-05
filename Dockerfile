@@ -18,10 +18,17 @@ RUN apt-get update -y && \
 RUN apt-get update -y && \
     apt-get install nmap -y
 
+# install less
+RUN apt-get update -y && \
+    apt-get install less
+
+# install prettytable
+RUN pip install -U prettytable
+
 # install requirements libraries
 RUN pip3 install -r requirements.txt
 
-# compile radamsa
+# compile radamsa from source
 RUN git clone --depth 1 --branch master https://gitlab.com/akihe/radamsa.git && \
     cd radamsa && \
     make -j$(nproc) && \

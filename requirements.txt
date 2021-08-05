@@ -6,7 +6,6 @@ pyperclip~=1.8.2
 setuptools~=54.0.0
 pyreadline3~=3.3
 blessed~=1.18.1
-prettytable~=2.0.0
 peewee
 scapy~=2.4.4
 python-nmap~=0.6.4
