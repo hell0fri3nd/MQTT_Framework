@@ -2,12 +2,14 @@
 
 This software is part of the Thesis Project for the **Bachelor in Computer Science at the Free University of Bolzano**. The idea was to develop a software, a framework with different tools that could automatize the security testing process for developers, in order to save time and help them find the most common vulnerabilities and bad implementation practices of MQTT protocol in IoT environments. This software has to adapt to different scenarios and implementations of the protocol and for this reason the tool should be highly customisable.
 
-![](https://www.eitfood.eu/media/partners-startups/University_of_Bolzano.png)
+<img src="https://www.eitfood.eu/media/partners-startups/University_of_Bolzano.png" style="zoom: 25%;" />
 
 ## What is MQTT
 
 MQTT is a protocol for information broadcasting between IoT devices originally designed by Andy Stanford-Clark and Arlen Nippe, the latest version is 5.0 although many devices still use version 3. It complies with the Open Artwork System Interchange Standard (OASIS) and is developed as an extremely lightweight transport model, aiming to have a very low code base and minimal bandwidth usage. These features are ideal for devices with limited resources that need a _publish/subscribe_ communication pattern, which provides one-to-many message distribution. As already mentioned, it has become a standard in the smart device industry also for its flexibility in being deployed with different network
 technologies, becoming vital for fields such as automotive, industrial manufacturing, telecommunications, etc.
+
+<img src="https://www.maritimedatasystems.com/wp-content/uploads/2018/04/Pure-javascript-MQTT-broker.png" style="zoom:50%;" />
 
 ## 📌 Requirements
 In order to run the framework you need to install the following package:
