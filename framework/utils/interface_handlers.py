@@ -14,7 +14,7 @@ def get_client_netdata(self):
             list = netifaces.interfaces()
             gen_show_ifaces(self, list)
 
-        self.print_verbose(str(list))
+        self.print_verbose(str(list), self.args)
         self.print_question(f'Choose the device number, type \\q to quit')
         while True:
             iface_num = input(f"Input: ")
