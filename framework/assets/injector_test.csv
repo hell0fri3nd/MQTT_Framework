@@ -1,2 +1,3 @@
 id,topic,message
-0,house/temperature,test
+0,home/alarm,triggered
+1,home/alarm/event,EVENT
