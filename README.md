@@ -7,16 +7,22 @@ This software is part of the Thesis Project for the **Bachelor in Computer Scien
 MQTT is a protocol for information broadcasting between IoT devices originally designed by Andy Stanford-Clark and Arlen Nippe, the latest version is 5.0 although many devices still use version 3. It complies with the Open Artwork System Interchange Standard (OASIS) and is developed as an extremely lightweight transport model, aiming to have a very low code base and minimal bandwidth usage. These features are ideal for devices with limited resources that need a _publish/subscribe_ communication pattern, which provides one-to-many message distribution. As already mentioned, it has become a standard in the smart device industry also for its flexibility in being deployed with different network
 technologies, becoming vital for fields such as automotive, industrial manufacturing, telecommunications, etc.
 
-## Requirements
-In order to run the framework you need to install the following packages:
+## 📌 Requirements
+In order to run the framework you need to install the following package:
+
+- <u>**Docker:**</u> To deploy the framework it is easier with Docker containers, you can download Docker [here](https://www.docker.com/products/docker-desktop). 
+
+Thanks to Docker you can install all the libraries with one command while drinking a cup of coffee, containers make our life easier! The framework has been tested on Windows 10 and Debian-based operating systems, both on Raspberry Pi and an average performance Windows machine. 
+
+#### ⚠️ ALTERNATIVE - If Docker raises issues ⚠️
+
+In case Docker raises issues with the deployment, the framework can be installed manually. To do this, please refer to `requirements.txt` and the following list of libraries:
 
 - <u>Nmap:</u>  Please refer to [Nmap website](https://nmap.org/download.html) to install the correct version for your environment. 
 - <u>Tshark:</u> Follow [Tshark docs](https://tshark.dev/setup/install/#installing-tshark-only) and learn how to install the right version for you. The framework needs Tshark only, but with Wireshark installation you get both Tshark and its GUI.
-- <u>Docker (optional):</u> To deploy the framework it is easier with Docker containers, you can download Docker [here](https://www.docker.com/products/docker-desktop). 
+- <u>Radamsa:</u> Check out the [official repo](https://gitlab.com/akihe/radamsa) to compile and deploy the library in your machine. 
 
-The framework has been tested on Windows 10 and GNU/Linux operating systems, both on Raspberry Pi and an average performance Windows machine. 
-
-## Installation
+## 📌 Installation
 
 The framework can be installed through **Docker**. 
 
@@ -26,7 +32,7 @@ The framework can be installed through **Docker**.
 - check if the image has no name with `docker images` (pip might have issues with *python-nmap* package), solve the issue with `docker tag <IMAGE_ID> <image-name>`
 - run the image by typing `sudo docker run -it <image-name>` 
 
-## Basic functionalities
+## 📌 Basic functionalities
 
 ### The plugins
 
@@ -47,5 +53,5 @@ command, what category it is related to and which argument parser apply when the
 `mixins\_init_.py`. Then the module has to be added to the mixins array in the _MQTTcli_ class.
 
 
-## References
-A special thanks to <u>Akamai Threat Research</u> and <u>Agneta Akorevaar (Kiwi PyCon 2019)</u> for the useful resources.
+## 📌 References
+A special thanks to <u>**Akamai Threat Research**</u> and <u>**Agneta Akorevaar (Kiwi PyCon 2019)**</u> for the useful resources.
