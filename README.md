@@ -21,6 +21,7 @@ In case Docker raises issues with the deployment, the framework can be installed
 - <u>Nmap:</u>  Please refer to [Nmap website](https://nmap.org/download.html) to install the correct version for your environment. 
 - <u>Tshark:</u> Follow [Tshark docs](https://tshark.dev/setup/install/#installing-tshark-only) and learn how to install the right version for you. The framework needs Tshark only, but with Wireshark installation you get both Tshark and its GUI.
 - <u>Radamsa:</u> Check out the [official repo](https://gitlab.com/akihe/radamsa) to compile and deploy the library in your machine. 
+- <u>Prettytable</u>: You can find the library [here](https://pypi.org/project/prettytable/). If you are running the framework in a Debian-based environment, remember to install *less* with the following command `apt update && apt install less`
 
 ## 📌 Installation
 
@@ -44,9 +45,7 @@ The framework supports Shodan.io analysis, to enable it just add your API KEY in
 ### Adding a custom module
 
 Each module must have its own ArgumentParser instance, which is a class that handles user input together with python's cli. When a new module is created, it has to respect the following criteria:
-- **Inheritance:** A new Mixin class must be produced in order to plug the custom module to the framework. This class has
-to inherit InterfaceMixin and must create a new, unique, instance of ArgumentParser. With this object the developer can
-add/handle custom arguments needed by its module with some help text.
+- **Inheritance:** A new Mixin class must be produced in order to plug the custom module to the framework. This class has to inherit InterfaceMixin and must create a new, unique, instance of ArgumentParser. With this object the developer can add/handle custom arguments needed by its module with some help text.
 -  **The do\_ operator:** Then the function `do\_"name of the command" `must be defined with the decorators `@with\_category` and `@with\_argparser`. In this way the framework will know what code to execute for a specific
 command, what category it is related to and which argument parser apply when the module is loaded with the framework cli. They are also used to check whether a `-help` option is specified.
 - **Exporting the module:** The custom code has to be exported from the mixins package first, by importing it in
