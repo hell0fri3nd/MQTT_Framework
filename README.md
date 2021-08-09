@@ -59,11 +59,11 @@ Each module must have its own ArgumentParser instance, which is a class that han
 
 ## 📌 Testing in a real life environment
 
-It is possible to set up a safe environment with software used in real life scenarios. The framework has been tested in order to prove naïve/unsafe implementations of MQTT brokers with a software for home IoT devices management and an android application were configured to work with a Mosquitto broker. The management software of use is [Home Assistant](www.home-assistant.io), which is an open source home automation software for DIY enthusiasts. It is a lightweight server developed specifically for programmable-boards deployment, it supports over 1000 devices including Alexa and Google Home, and can be extended with multiple add-ons; this flexibility allows MQTT configuration with the Mosquitto broker. The idea is to simulate a smart alarm system which then could be controlled with the Home Assistant platform and the [Alarm Panel](https://play.google.com/store/apps/details?id=com.thanksmister.iot.mqtt.alarmpanel&hl=it&gl=US) android application.
+It is possible to set up a safe environment with software used in real life scenarios. The framework has been tested in order to prove naïve/unsafe implementations of MQTT brokers with a software for home IoT devices management and an android application. This set up communicates with a Mosquitto broker. The management software of use is [Home Assistant](www.home-assistant.io), which is an open source home automation software for DIY enthusiasts. It is a lightweight server developed specifically for programmable-boards deployment, it supports over 1000 devices including Alexa and Google Home, and can be extended with multiple add-ons; this flexibility allows MQTT configuration with the Mosquitto broker. The idea is to simulate a smart alarm system which then could be controlled with the Home Assistant platform and the [Alarm Panel](https://play.google.com/store/apps/details?id=com.thanksmister.iot.mqtt.alarmpanel&hl=it&gl=US) android application.
 
 Perform the following steps to set up your environment:
 
-- Refer to [Mosquitto website](https://mosquitto.org/) to install and deploy Mosquitto with Docker.
+- Refer to [Mosquitto website](https://mosquitto.org/) to install and deploy Mosquitto with/without Docker.
 
 - Deploy Home Assistant container following this [guide](https://www.home-assistant.io/installation/raspberrypi#install-home-assistant-container).
 
